@@ -1,0 +1,20 @@
+# Build and install directories
+build/
+install/
+log/
+
+# VS Code settings
+.vscode/
+*.vc.db
+*.vc.db-shm
+*.vc.db-wal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary files
+*.swp
+*~
+.DS_Store
