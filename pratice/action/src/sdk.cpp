@@ -15,7 +15,6 @@ SDK_Motion::SDK_Motion()
     current_seg_idx_ = 0; 
     current_tick_ = 0; 
     current_motion_id_ = -1; 
-    pending_motion_id_ = -1;
     current_v_.assign(NUMBER_OF_JOINTS, 0.0);
     current_a_.assign(NUMBER_OF_JOINTS, 0.0);
     define_motions(); 
@@ -79,100 +78,14 @@ void SDK_Motion::calculate_coefficients
 bool SDK_Motion::Generate_Trajectory(int motion_id, double* current_pose, double transition_time) {
     if (motion_library_.find(motion_id) == motion_library_.end()) return false;
 
+    // 🔒 동작 중일 때는 새로운 명령을 무시
     if (Is_Moving()) {
-        int last_idx = (int)active_trajectory_.size() - 1;
-        
-        // 🔒 [1. 마지막 구간 차단]
-        if (current_seg_idx_ >= last_idx) {
-            std::cerr << "[SDK] 예약 거부: 이미 마지막 구간입니다." << std::endl;
-            return false;
-        }
-
-        // 🔒 [2. 80% Lock-out] 현재 구간이 거의 끝나갈 때는 재계산 안 함 (물리적 안정성)
-        double progress = (double)current_tick_ / active_trajectory_[current_seg_idx_].total_ticks;
-        if (progress > 0.8) {
-            std::cout << "[SDK] 예약 잠금: 구간 진행률 " << (int)(progress*100) << "% - 다음 구간 시작 시까지 대기" << std::endl;
-            return true; 
-        }
-
-        // 🕒 [3. 슬라이딩 윈도우 업데이트]
-        vote_window_.push_front(motion_id);
-        if ((int)vote_window_.size() > window_size_) vote_window_.pop_back();
-
-        int final_motion_id = motion_id; // 기본값은 최신 명령
-
-        // 🗳️ [4. Active Zone Voting] 마지막 전 2개 구간에서만 투표 결과 적용
-        if (current_seg_idx_ >= last_idx - 2) {
-            std::map<int, int> counts;
-            for (int id : vote_window_) counts[id]++;
-            
-            int winner = -1, max_votes = -1;
-            for (auto const& [id, count] : counts) {
-                if (count > max_votes) { max_votes = count; winner = id; }
-            }
-            final_motion_id = winner;
-            std::cout << "[SDK] 투표 구간 진입: 최빈값 " << final_motion_id << " (" << max_votes << "표) 선택" << std::endl;
-        }
-
-        if (pending_motion_id_ == final_motion_id) return true;
-        
-        // --- 궤적 재생성 로직 ---
-        const auto& target_seq = motion_library_.at(final_motion_id);
-        auto& last_seg = active_trajectory_.back();
-        std::vector<double> q_last(NUMBER_OF_JOINTS);
-        double T_seg = static_cast<double>(last_seg.total_ticks) / HZ;
-        
-        for(int i=0; i<NUMBER_OF_JOINTS; ++i) {
-            double dq_seg = (last_seg.c3[i]*pow(T_seg,3) + last_seg.c4[i]*pow(T_seg,4) + last_seg.c5[i]*pow(T_seg,5)) 
-                          + last_seg.c1[i]*T_seg + last_seg.c2[i]*T_seg*T_seg;
-            q_last[i] = last_seg.c0[i] + dq_seg;
-        }
-        
-        pending_trajectory_.clear();
-        std::vector<std::vector<double>> waypoints = {q_last};
-        for (const auto& p : target_seq.poses) waypoints.push_back(p);
-        
-        std::vector<double> durations = {transition_time};
-        for (double d : target_seq.durations) durations.push_back(d);
-
-        int M = waypoints.size();
-        std::vector<std::vector<double>> V(M, std::vector<double>(NUMBER_OF_JOINTS, 0.0));
-        
-        for (int i = 0; i < M; ++i) {
-            if (i == 0) {
-                for (int j = 0; j < NUMBER_OF_JOINTS; ++j) 
-                    V[i][j] = normalize_angle(waypoints[1][j] - last_seg.c0[j]) / (T_seg + durations[0]);
-                
-                if (current_seg_idx_ < last_idx) {
-                    std::vector<double> v0_last(NUMBER_OF_JOINTS), a0_last(NUMBER_OF_JOINTS);
-                    for(int j=0; j<NUMBER_OF_JOINTS; ++j) { v0_last[j] = last_seg.c1[j]; a0_last[j] = 2.0 * last_seg.c2[j]; }
-                    calculate_coefficients(last_seg.c0, q_last, v0_last, V[i], a0_last, std::vector<double>(NUMBER_OF_JOINTS, 0.0), T_seg, last_seg);
-                }
-                for (int j = 0; j < NUMBER_OF_JOINTS; ++j) {
-                    double T_l = static_cast<double>(last_seg.total_ticks) / HZ;
-                    V[i][j] = last_seg.c1[j] + 2*last_seg.c2[j]*T_l + 3*last_seg.c3[j]*pow(T_l,2) + 4*last_seg.c4[j]*pow(T_l,3) + 5*last_seg.c5[j]*pow(T_l,4);
-                }
-            } else if (i == M - 1) {
-                V[i].assign(NUMBER_OF_JOINTS, 0.0);
-            } else {
-                for (int j = 0; j < NUMBER_OF_JOINTS; ++j) 
-                    V[i][j] = normalize_angle(waypoints[i+1][j] - waypoints[i-1][j]) / (durations[i-1] + durations[i]);
-            }
-        }
-
-        for (int i = 0; i < M - 1; ++i) {
-            TrajectorySegment seg;
-            calculate_coefficients(waypoints[i], waypoints[i+1], V[i], V[i+1], std::vector<double>(NUMBER_OF_JOINTS, 0.0), std::vector<double>(NUMBER_OF_JOINTS, 0.0), durations[i], seg);
-            pending_trajectory_.push_back(seg);
-        }
-        pending_motion_id_ = final_motion_id;
-        std::cout << "[SDK] 예약 확정: 모션 ID " << final_motion_id << std::endl;
-        return true;
+        // std::cout << "[SDK] 동작 중: 명령(ID " << motion_id << ") 무시됨" << std::endl;
+        return false;
     }
 
-    // --- 정지 상태 로직 ---
-    active_trajectory_.clear(); pending_trajectory_.clear(); pending_motion_id_ = -1;
-    vote_window_.clear(); 
+    // 명령을 받으면 즉시 현재 위치에서 새로운 궤적을 생성하여 실행
+    active_trajectory_.clear();
     current_motion_id_ = motion_id;
     const auto& seq = motion_library_.at(motion_id);
     std::vector<std::vector<double>> waypoints = {std::vector<double>(current_pose, current_pose + NUMBER_OF_JOINTS)};
@@ -194,6 +107,7 @@ bool SDK_Motion::Generate_Trajectory(int motion_id, double* current_pose, double
         active_trajectory_.push_back(seg);
     }
     current_seg_idx_ = 0; current_tick_ = 0;
+    std::cout << "[SDK] 명령 즉시 실행: 모션 ID " << motion_id << std::endl;
     return true;
 }
 
@@ -201,16 +115,9 @@ bool SDK_Motion::Is_Moving() { return !active_trajectory_.empty() && (current_se
 
 bool SDK_Motion::Get_Next_Tick(double* All_Theta) {
     if (!Is_Moving()) {
-        if (!pending_trajectory_.empty()) {
-            active_trajectory_ = std::move(pending_trajectory_);
-            pending_trajectory_.clear();
-            vote_window_.clear(); // 🧹 다음 투표 준비
-            current_motion_id_ = pending_motion_id_; pending_motion_id_ = -1;
-            current_seg_idx_ = 0; current_tick_ = 0;
-        } else {
-            current_v_.assign(NUMBER_OF_JOINTS, 0.0); current_a_.assign(NUMBER_OF_JOINTS, 0.0);
-            return false; 
-        }
+        current_v_.assign(NUMBER_OF_JOINTS, 0.0); 
+        current_a_.assign(NUMBER_OF_JOINTS, 0.0);
+        return false; 
     }
     const auto& seg = active_trajectory_[current_seg_idx_];
     double t = static_cast<double>(current_tick_) / HZ;
@@ -224,17 +131,3 @@ bool SDK_Motion::Get_Next_Tick(double* All_Theta) {
     if (current_tick_ >= seg.total_ticks) { current_seg_idx_++; current_tick_ = 0; }
     return true; 
 }
-
-""" 1. 슬라이딩 윈도우(Sliding Window) 투표: std::deque를 사용하여 최근 20개의 명령만 유지합니다. 이를 통해 오래된 데이터의 영향력을 자동으로 배제하고 최신 명령의 트렌드를 즉각
-      반영합니다.
-     2. 80% Lock-out (진행률 기반 잠금): 현재 재생 중인 구간(Segment)이 80% 이상 진행되면 예약을 잠금(Lock) 처리합니다. 이는 다음 구간으로 넘어가기 직전에 궤적을 급하게 수정할 경우
-      발생할 수 있는 물리적 충격(Jump)을 방지합니다.
-   3. 집중 투표 구간(Active Zone Voting):
-       * 초반 구간: 가장 최신 명령을 즉시 예약에 반영하여 빠른 반응성을 유지합니다.
-       * 마지막 전 2개 포즈 구간: 이 시점부터는 슬라이딩 윈도우 내의 최빈값을 계산하여 신중하게 최종 예약을 확정합니다.
-       * 마지막 구간: 기존 로직과 동일하게 모든 예약을 거부하여 안전하게 동작을 마무리합니다.
-   4. 계산 최적화: 최빈값 모션 ID가 현재 예약된 ID와 동일할 경우에는 무거운 궤적 재계산 과정을 생략하도록 효율화했습니다.
-
-  이제 로봇은 움직이는 동안 명령을 계속 수집하다가, 동작이 끝나기 직전 가장 지배적인 명령을 최종 선택하여 부드럽게 다음 동작으로 연결합니다. 터미널의 [SDK] 투표 구간 진입, [SDK] 예약
-  잠금 등의 로그를 통해 실시간 판단 상태를 확인하실 수 있습니다. """
-                                                                         

@@ -24,16 +24,11 @@ private:
     std::map<int, MotionSequence> motion_library_; 
 
     std::vector<TrajectorySegment> active_trajectory_; 
-    std::vector<TrajectorySegment> pending_trajectory_; 
 
     int current_seg_idx_; 
     int current_tick_; 
     int current_motion_id_; 
-    int pending_motion_id_; 
     
-    std::deque<int> vote_window_; // 🕒 슬라이딩 윈도우: 최근 N개의 명령 저장
-    const int window_size_ = 20;   // 윈도우 크기
-
     std::vector<double> current_v_; 
     std::vector<double> current_a_; 
 
