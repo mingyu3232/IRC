@@ -61,16 +61,19 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
 
-            if (valid_count > 0) validated_theta /= (double)valid_count;
-            else validated_theta.setZero();
+            if (valid_count > 0) {
+                validated_theta /= (double)valid_count;
+            } else {
+                RCLCPP_ERROR(this->get_logger(), "현재 관절각을 읽지 못했습니다. 안전을 위해 모션을 시작하지 않습니다.");
+                rclcpp::shutdown();
+                return;
+            }
         } else {
             validated_theta = dxl_port.GetThetaAct();
         }
         
         // 뇌(robot_brain)의 현재 각도를 읽어온 실제 값으로 설정 (초기 동기화)
-        for(int i = 0; i < NUMBER_OF_JOINTS; ++i) {
-            robot_brain.All_Theta[i] = validated_theta[i];
-        }
+        robot_brain.SetCurrentTheta(validated_theta);
 
         if (is_virtual_) {
             RCLCPP_WARN(this->get_logger(), "🤖 [VIRTUAL] 가상 모드 실행 중... (모터 통신 안 함)");

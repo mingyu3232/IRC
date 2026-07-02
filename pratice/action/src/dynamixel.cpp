@@ -79,11 +79,14 @@ Dxl::Dxl(bool use_virtual)
 
         // 제어 모드를 위치 제어 모드로 설정합니다.
         packetHandler->write1ByteTxRx(portHandler, dxl_id[i], DxlReg_OperatingMode, Position_Control_Mode, &dxl_error);
-        // Position_Control_Mode는 위치 제어 모드로 설정하는 값입니다. 값은 헤더파일에 정의되어 있습니다.
+
+        // 🚀 [보완] Profile Velocity와 Profile Acceleration을 0으로 설정 (내부 가감속 비활성화)
+        // 5차 다항식 궤적을 정확히 따르기 위해 모터 자체의 프로파일 기능을 끕니다.
+        packetHandler->write4ByteTxRx(portHandler, dxl_id[i], 112, 0, &dxl_error); // Profile Velocity
+        packetHandler->write4ByteTxRx(portHandler, dxl_id[i], 108, 0, &dxl_error); // Profile Acceleration
 
         // 토크 On (모터에 힘 주기)
         packetHandler->write1ByteTxRx(portHandler, dxl_id[i], DxlReg_TorqueEnable, 1, &dxl_error);
-        // DxlReg_TorqueEnable 레지스터에 1을 써서 토크를 켭니다.
 
         // LED On (디버깅용)
         packetHandler->write1ByteTxRx(portHandler, dxl_id[i], DxlReg_LED, 1, &dxl_error);

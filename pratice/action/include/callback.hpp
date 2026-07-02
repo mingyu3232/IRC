@@ -1,20 +1,21 @@
 #pragma once
 #include <rclcpp/rclcpp.hpp>
+#include <Eigen/Dense>
 #include "sdk.hpp"
 
-class Callback : public rclcpp::Node 
+class Callback : public rclcpp::Node
+// Callback 클래스는 ROS 2 노드로서, 모션 제어와 관련된 콜백 기능을 제공합니다.
 {
 private:
-    SDK_Motion sdk_engine; 
+    SDK_Motion sdk_motion; // SDK_Motion를 사용하여 모션 라이브러리와 궤적 생성 기능을 제공합니다.
 
 public:
-    Callback();
+    Callback(); // 생성자
     
     double All_Theta[NUMBER_OF_JOINTS]; 
 
+    void SetCurrentTheta(const Eigen::VectorXd& theta);
     void SelectMotion(int go, double transition_time = 0.5);
     void Write_All_Theta();
-
-    // 🚀 로봇이 현재 움직이는 중인지(Active 슬롯에 궤적이 있는지) 확인하는 함수
     bool IsMoving();
 };
