@@ -85,8 +85,8 @@ public:
         // 1. 안전한 시작: 기본 자세(0번)로 이동
         // =========================================================
         RCLCPP_INFO(this->get_logger(), "🐢 안전 모드: 기본 자세로 이동합니다.");
-        robot_brain.SelectMotion(0, 3.0);  // 0번 모션, 3초 전환 (안전하게 시작)
-        // SelectMotion 함수는 모션 ID와 전환 시간을 입력받아서, 해당 모션으로 부드럽게 전환하는 기능을 수행합니다.
+        robot_brain.SelectMotion(0);  // 0번 모션, SDK에 설정된 3초 전환 (안전하게 시작)
+        // SelectMotion 함수는 모션 ID를 입력받아서, SDK에 설정된 시간 동안 해당 모션으로 부드럽게 전환하는 기능을 수행합니다.
         // all_theta 배열을 업데이트하여, 3초 동안 0번 모션의 궤적을 따라가도록 설정합니다. 이 과정에서 로봇이 갑자기 움직이지 않도록 안전하게 시작할 수 있습니다.
         // all_theta가 채워지면 바로 실행되는게 아니지 않나? 따로 실행해주는 함수가 있어야 3초동안 실행되는 거 아닌가?
         // → SelectMotion 함수 내부에서 모션 시퀀스가 생성되고, Get_Next_Tick() 함수가 100Hz 제어 루프에서 호출될 때마다 현재 재생 중인 궤적의 다음 프레임에 해당하는 각도들이 계산되어 all_theta 배열에 업데이트됩니다.
@@ -103,10 +103,10 @@ public:
                 int key = getch(); 
                 if (key == '1') {
                     RCLCPP_INFO(this->get_logger(), "PRESSED: 1 (명령 전송)");
-                    robot_brain.SelectMotion(1, 1.0); // 1번 모션, 1초 전환
+                    robot_brain.SelectMotion(1); // 1번 모션, SDK에 설정된 시간으로 전환
                 } else if (key == '0') {
                     RCLCPP_INFO(this->get_logger(), "PRESSED: 0 (명령 전송)");
-                    robot_brain.SelectMotion(0, 1.0); // 0번 모션, 1초 전환
+                    robot_brain.SelectMotion(0); // 0번 모션, SDK에 설정된 시간으로 전환
                 } else if (key == 'q') {
                     RCLCPP_INFO(this->get_logger(), "테스트 종료...");
                     rclcpp::shutdown();

@@ -128,7 +128,7 @@ st.title("민규의 모션 추출기 (Pro Sequencer)")
 
 @st.cache_resource
 def init_dxl():
-    ph = PortHandler('/dev/ttyUSB0')
+    ph = PortHandler('/dev/ttyUSB1')
     pkh = PacketHandler(2.0)
     if ph.openPort() and ph.setBaudRate(2000000):
         ph.clearPort()
