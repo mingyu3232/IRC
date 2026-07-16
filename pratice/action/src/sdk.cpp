@@ -318,7 +318,7 @@ void SDK_Motion::define_motions()
 
 
     // ----------------------------------------------------------
-    // 모션 2번: 직진 3걸음 근접 모드
+    // 모션 20번: 직진 3걸음 근접 모드
     // ----------------------------------------------------------
     MotionSequence motion_forward_3;
 
@@ -502,11 +502,11 @@ void SDK_Motion::define_motions()
         BlendType::Stop
     };
 
-    motion_library_[2] = motion_forward_3;
+    motion_library_[20] = motion_forward_3;
 
 
     // ----------------------------------------------------------
-    // 모션 3번: 미세좌회전 4걸음
+    // 모션 2번: 미세좌회전 4걸음
     // ----------------------------------------------------------
     MotionSequence motion_fine_left_4;
 
@@ -714,11 +714,11 @@ void SDK_Motion::define_motions()
         BlendType::Smooth
     };
 
-    motion_library_[3] = motion_fine_left_4;
+    motion_library_[2] = motion_fine_left_4;
 
 
     // ----------------------------------------------------------
-    // 모션 4번: 미세우회전 4걸음
+    // 모션 3번: 미세우회전 4걸음
     // ----------------------------------------------------------
     MotionSequence motion_fine_right_4;
 
@@ -926,11 +926,11 @@ void SDK_Motion::define_motions()
         BlendType::Stop
     };
 
-    motion_library_[4] = motion_fine_right_4;
+    motion_library_[3] = motion_fine_right_4;
 
 
     // ----------------------------------------------------------
-    // 모션 5번: 트래킹 제자리 좌회전
+    // 모션 6번: 트래킹 제자리 좌회전
     // ----------------------------------------------------------
     MotionSequence motion_tracking_left;
 
@@ -1266,11 +1266,11 @@ void SDK_Motion::define_motions()
         BlendType::Smooth
     };
 
-    motion_library_[5] = motion_tracking_left;
+    motion_library_[6] = motion_tracking_left;
 
 
     // ----------------------------------------------------------
-    // 모션 6번: 트래킹 제자리 우회전
+    // 모션 7번: 트래킹 제자리 우회전
     // ----------------------------------------------------------
     MotionSequence motion_tracking_right;
 
@@ -1534,11 +1534,11 @@ void SDK_Motion::define_motions()
         BlendType::Smooth
     };
 
-    motion_library_[6] = motion_tracking_right;
+    motion_library_[7] = motion_tracking_right;
 
 
     // ----------------------------------------------------------
-    // 모션 7번: 제자리 좌회전 5도
+    // 모션 23번: 제자리 좌회전 5도
     // ----------------------------------------------------------
     MotionSequence motion_turn_left_5;
 
@@ -1602,11 +1602,11 @@ void SDK_Motion::define_motions()
         BlendType::Smooth
     };
 
-    motion_library_[7] = motion_turn_left_5;
+    motion_library_[23] = motion_turn_left_5;
 
 
     // ----------------------------------------------------------
-    // 모션 8번: 제자리 우회전 5도
+    // 모션 24번: 제자리 우회전 5도
     // ----------------------------------------------------------
     MotionSequence motion_turn_right_5;
 
@@ -1670,7 +1670,7 @@ void SDK_Motion::define_motions()
         BlendType::Smooth
     };
 
-    motion_library_[8] = motion_turn_right_5;
+    motion_library_[24] = motion_turn_right_5;
 }
 
 // ==========================================================
